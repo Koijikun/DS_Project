@@ -42,9 +42,8 @@ df_reduced = ld.df.drop(columns=['Veränderung Vortag','Wegzüge','Zuzüge','Tod
 
 # adding previous values to help with forecasting at a later point
 df_reduced['lag_1'] = df_reduced['Wasserverbrauch'].shift(1)
-df_reduced['lag_2'] = df_reduced['Wasserverbrauch'].shift(365)
+df_reduced['lag_2'] = df_reduced['Wasserverbrauch'].shift(2)
 # pending: fill values where lag isnt possible
-
 
 
 sns.heatmap(df_reduced.corr(), annot=True, cmap='coolwarm', fmt='.2f')
