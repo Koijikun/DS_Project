@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 # Assuming df is your cleaned and pre-processed DataFrame
 # Your target variable is 'Wasserverbrauch' (water consumption)
 # You have dummy variables for weekdays ('is_monday', 'is_tuesday', etc.)
-df_reduced = df_reduced.asfreq('D')
+
+df_reduced.index = pd.DatetimeIndex(df_reduced.index).to_period('D')
 
 # Step 1: Specify the endogenous and exogenous variables
 endog = df_reduced['Wasserverbrauch']  # Endogenous variable (water consumption)

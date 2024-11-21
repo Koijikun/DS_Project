@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load your CSV data with the correct date format
-df = pd.read_csv('./water_consumption_2015_2023.csv', delimiter=';', parse_dates=['Datum'], index_col='Datum', dayfirst=True)
+df = pd.read_csv('./water_consumption_2015_2023.csv', delimiter=';', parse_dates=['Datum'], dayfirst=True)
 
 # Display the first few rows to inspect the data
 print(df.head())
@@ -21,7 +21,12 @@ outliers = (df['Wasserverbrauch'] < lower_bound) | (df['Wasserverbrauch'] > uppe
 # Interpolate outliers
 df['Wasserverbrauch'] = df['Wasserverbrauch'].where(~outliers).interpolate(method='linear')
 
-# Convert all columns to numeric (float64), invalid values will be set as NaN
+print(df.columns)
+
+df['Datum'] = pd.to_datetime(df['Datum'], errors='coerce')  # Ensure it's a proper datetime format
+df.set_index('Datum', inplace=True)
+
+# Now convert the rest of the columns to numeric
 df = df.apply(pd.to_numeric, errors='coerce')
 
 # Create dummy variables for weekdays
