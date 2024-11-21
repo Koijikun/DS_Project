@@ -1,4 +1,4 @@
-from exploration import df_reduced
+from data_exploration.exploration import df_reduced
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, GridSearchCV, TimeSeriesSplit

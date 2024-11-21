@@ -1,4 +1,4 @@
-from exploration import df_reduced
+from data_exploration.exploration import df_reduced
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
