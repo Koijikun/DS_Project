@@ -4,48 +4,95 @@ import plot_functions as pl
 import seaborn as sns
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from statsmodels.tsa.seasonal import seasonal_decompose
 
-# Visualize data in basic plot
-pl.plot_aggregated_data(ld.df, days=1, column='Wasserverbrauch')
+# plot aggregated data
+def plot_aggregated_data(df, days=7, column='Wasserverbrauch'):
+    pl.plot_aggregated_data(df, days=days, column=column)
+
+# Function to plot the moving average with a given window size
+def plot_moving_average(df, column='Wasserverbrauch', window=30):
+    df['rolling_mean'] = df[column].rolling(window=window).mean()
+    plt.figure(figsize=(10, 6))
+    plt.plot(df.index, df[column], label='Original')
+    plt.plot(df.index, df['rolling_mean'], label=f'{window}-Day Rolling Mean', color='red')
+    plt.legend()
+    plt.title(f'{column} with {window}-Day Rolling Mean')
+    plt.show()
+
+# Function to plot correlation matrix of the dataset
+def plot_correlation_matrix(df, annot=True, cmap='coolwarm', fmt='.2f'):
+    """
+    Plot the correlation matrix to check for multicollinearity and feature relationships.
+    """
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(df.corr(), annot=annot, cmap=cmap, fmt=fmt)
+    plt.title('Correlation Matrix')
+    plt.show()
+
+# Function to check stationarity using ADF Test
+def check_stationarity(df, column='Wasserverbrauch', threshold=0.05):
+    """
+    Perform the Augmented Dickey-Fuller test to check if the data is stationary.
+    """
+    result = adfuller(df[column])
+    print(f'ADF Statistic: {result[0]}')
+    print(f'p-value: {result[1]}')
+    if result[1] < threshold:
+        print(f"The series is stationary (p-value < {threshold}).")
+    else:
+        print(f"The series is non-stationary (p-value >= {threshold}).")
+
+# Function to plot ACF and PACF
+def plot_acf_pacf(df, column='Wasserverbrauch', lags=100):
+    plot_acf(df['Wasserverbrauch'].dropna(), lags=100)
+    plot_pacf(df['Wasserverbrauch'].dropna(), lags=100)
+    plt.show()
+
+# Function to drop 'insignificant' features based on analysis
+def drop_insignificant_features(df, columns_to_drop=None):
+    """
+    Drop columns that are considered insignificant for the analysis.
+    """
+    if columns_to_drop is None:
+        columns_to_drop = ['Veränderung Vortag','Wegzüge','Zuzüge','Todesfälle','T_max_h1_C','p_hPa']
+    return df.drop(columns=columns_to_drop)
+
+# Function to add lag features for forecasting
+def add_lag_features(df, column='Wasserverbrauch', lags=[1, 2]):
+    """
+    Add lag features for time series forecasting (e.g., lag_1, lag_2).
+    """
+    for lag in lags:
+        df[f'lag_{lag}'] = df[column].shift(lag)
+    return df
+
+
+# 1. Visualize data in basic plot (aggregated data)
+plot_aggregated_data(ld.df, days=7, column='Wasserverbrauch')
 # Data shows a clear structural break during 2020 which has to be handled later
 
-# Show moving average
-ld.df['rolling_mean'] = ld.df['Wasserverbrauch'].rolling(window=30).mean()
-plt.plot(ld.df.index, ld.df['Wasserverbrauch'], label='Original')
-plt.plot(ld.df.index, ld.df['rolling_mean'], label='30-Day Rolling Mean', color='red')
-plt.legend()
-plt.show()
+# 2. Show moving average with a 30-day window
+plot_moving_average(ld.df, column='Wasserverbrauch', window=30)
 
-# Check correlation --> which variable to keep/eliminate
-sns.heatmap(ld.df.corr(), annot=True, cmap='coolwarm', fmt='.2f')
-plt.show()
+# 3. Check correlation matrix and visualize it
+plot_correlation_matrix(ld.df, annot=True, cmap='coolwarm', fmt='.2f')
 # Most important features: Geburte, RainDur_min, StrGlo_W/m2, T_C, rolling_mean
 # Eliminate due to multicollinearity: T_max_h1_C
 # Keep watching: Multicollinearity for StrGlo_W/m2 & T_C: 0.74
 
-# stationarity check --> smaller than 0.05 = stationary
-result = adfuller(ld.df['Wasserverbrauch'])
-print(f'ADF Statistic: {result[0]}')
-print(f'p-value: {result[1]}')
-# Data is stationary
+# 4. Check stationarity of the time series data
+check_stationarity(ld.df, column='Wasserverbrauch')
 
-# ACF & PACF
-plot_acf(ld.df['Wasserverbrauch'].dropna(), lags=100)
-plot_pacf(ld.df['Wasserverbrauch'].dropna(), lags=100)
-plt.show()
+# 5. Plot ACF and PACF to check for seasonality
+plot_acf_pacf(ld.df, column='Wasserverbrauch', lags=100)
 # As expected seasonality is present
 # +/- 10 significant lags
 
-# dropping 'insignificant' features
-df_reduced = ld.df.drop(columns=['Veränderung Vortag','Wegzüge','Zuzüge','Todesfälle','T_max_h1_C','p_hPa'])
+# 6. Drop 'insignificant' features
+df_reduced = drop_insignificant_features(ld.df)
 
-# adding previous values to help with forecasting at a later point
-df_reduced['lag_1'] = df_reduced['Wasserverbrauch'].shift(1)
-df_reduced['lag_2'] = df_reduced['Wasserverbrauch'].shift(2)
-# pending: fill values where lag isnt possible
+# 7. Add lag features to the dataset for forecasting
+df_reduced = add_lag_features(df_reduced, column='Wasserverbrauch', lags=[1, 2])
 
-
-sns.heatmap(df_reduced.corr(), annot=True, cmap='coolwarm', fmt='.2f')
-plt.show()
-
+# 8. Visualize the correlation matrix of the reduced dataset
+plot_correlation_matrix(df_reduced, annot=True, cmap='coolwarm', fmt='.2f')
