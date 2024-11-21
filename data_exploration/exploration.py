@@ -4,7 +4,7 @@ import plot_functions as pl
 import seaborn as sns
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-import ruptures as rpt
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 # Visualize data in basic plot
 pl.plot_aggregated_data(ld.df, days=1, column='Wasserverbrauch')
@@ -42,8 +42,11 @@ df_reduced = ld.df.drop(columns=['Veränderung Vortag','Wegzüge','Zuzüge','Tod
 
 # adding previous values to help with forecasting at a later point
 df_reduced['lag_1'] = df_reduced['Wasserverbrauch'].shift(1)
-df_reduced['lag_2'] = df_reduced['Wasserverbrauch'].shift(2)
-df_reduced['lag_3'] = df_reduced['Wasserverbrauch'].shift(3)
+df_reduced['lag_2'] = df_reduced['Wasserverbrauch'].shift(365)
+# pending: fill values where lag isnt possible
+
+
 
 sns.heatmap(df_reduced.corr(), annot=True, cmap='coolwarm', fmt='.2f')
 plt.show()
+
