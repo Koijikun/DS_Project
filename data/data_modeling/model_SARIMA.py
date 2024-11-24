@@ -1,3 +1,11 @@
+# subfolder/sub_script.py
+import sys
+import os
+
+# Add the parent directory to the Python path
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+
 from data_exploration.exploration import df_reduced
 import pandas as pd
 import numpy as np
@@ -22,10 +30,18 @@ exog_clean = exog_clean.dropna()  # Drop rows with NaN values
 endog_clean = endog[exog_clean.index]
 
 
-# Step 2: Fit the ARIMA model
+# Step 2: Fit the SARIMA model
 # Seasonal order (P, D, Q, m) where m = 365 for yearly seasonality
 # p, d, q are the non-seasonal AR, I, MA orders respectively
-model = sm.tsa.ARIMA(endog_clean, order=(1, 1, 1))
+# Use only a subset of data for faster testing
+endog_clean_subset = endog_clean[:365]  # First year of data
+exog_clean_subset = exog_clean[:365]
+model = sm.tsa.SARIMAX(endog_clean_subset, exog=exog_clean_subset,
+                       order=(1, 1, 1),  # Non-seasonal AR, I, MA orders
+                       seasonal_order=(1, 1, 1, 30),  # Seasonal AR, I, MA orders with yearly seasonality
+                       enforce_stationarity=False,
+                       enforce_invertibility=False)
+results = model.fit(disp=False)
 
 # Step 3: Fit the model
 results = model.fit()

@@ -1,6 +1,14 @@
+# subfolder/sub_script.py
+import sys
+import os
+
+# Add the parent directory to the Python path
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+
 import matplotlib.pyplot as plt
-import load_clean_data as ld
-import plot_functions as pl
+import data_exploration.load_clean_data as ld
+import data_exploration.plot_functions as pl
 import seaborn as sns
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
