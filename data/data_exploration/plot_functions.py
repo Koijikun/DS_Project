@@ -1,50 +1,61 @@
-import pandas as pd
+# plot_functions.py
+
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Function to aggregate data
-def aggregate_data(df, days=7, column='Wasserverbrauch'):
-    """
-    Aggregates the specified column in the DataFrame by resampling it to a specified number of days.
-    
-    Parameters:
-    - df: DataFrame containing the data
-    - days: Number of days to aggregate (default is 7)
-    - column: The column name to aggregate (default is 'Wasserverbrauch')
-    
-    Returns:
-    - Aggregated data (pandas Series)
-    """
-    # Ensure index is datetime (in case it's not already set)
-    if not pd.api.types.is_datetime64_any_dtype(df.index):
-        df.index = pd.to_datetime(df.index, dayfirst=True)
-    
-    # If days = 1, return original data without aggregation
-    if days == 1:
-        return df[column]
-    else:
-        # Resample data by summing up over the specified number of days
-        return df[column].resample(f'{days}D').sum()
-
-
-# Function to plot aggregated data
 def plot_aggregated_data(df, days=7, column='Wasserverbrauch'):
     """
-    Plots the aggregated data (sum of a given column over the specified number of days).
-    
-    Parameters:
-    - df: DataFrame containing the data
-    - days: Number of days to aggregate (default is 7)
-    - column: The column name to plot (default is 'Wasserverbrauch')
+    Plots the aggregated data (sum over the specified window of days).
     """
-    # Get the aggregated data by calling the aggregate_data function
-    aggregated_data = aggregate_data(df, days, column)
-    
-    # Plot the aggregated data
+    df_resampled = df[column].resample(f'{days}D').sum()
     plt.figure(figsize=(10, 6))
-    plt.plot(aggregated_data.index, aggregated_data.values, marker='o', label=f'{days}-Day Aggregated {column}' if days > 1 else f'{column} (Original Data)')
-    plt.title(f'{column} Aggregated Over {days}-Day Periods' if days > 1 else f'{column} (Original Data)')
+    plt.plot(df_resampled.index, df_resampled, label=f'{days}-Day Aggregated Data', color='blue')
+    plt.title(f'{column} Aggregated Over {days}-Day Periods')
     plt.xlabel('Date')
-    plt.ylabel(f'{column} (Aggregated)' if days > 1 else f'{column}')
+    plt.ylabel(f'{column}')
     plt.legend()
     plt.grid(True)
+    plt.show()
+
+def plot_correlation_matrix(df, annot=True, cmap='coolwarm', fmt='.2f'):
+    """
+    Plots the correlation matrix of the DataFrame.
+    """
+    corr_matrix = df.corr()
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(corr_matrix, annot=annot, cmap=cmap, fmt=fmt, linewidths=0.5)
+    plt.title('Correlation Matrix')
+    plt.show()
+
+def plot_moving_average(df, column='Wasserverbrauch', window=30):
+    """
+    Plots the moving average for the given column in the DataFrame.
+    """
+    df['rolling_mean'] = df[column].rolling(window=window).mean()
+    plt.figure(figsize=(10, 6))
+    plt.plot(df.index, df[column], label='Original')
+    plt.plot(df.index, df['rolling_mean'], label=f'{window}-Day Rolling Mean', color='red')
+    plt.legend()
+    plt.title(f'{column} with {window}-Day Rolling Mean')
+    plt.show()
+
+def plot_acf_pacf(df, column='Wasserverbrauch', lags=100):
+    """
+    Plots the ACF and PACF of the given column in the DataFrame.
+    """
+    from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+    plot_acf(df[column].dropna(), lags=lags)
+    plot_pacf(df[column].dropna(), lags=lags)
+    plt.show()
+
+def plot_forecast(df, forecast_mean, forecast_ci, observed_column='Wasserverbrauch'):
+    """
+    Plots the observed data along with forecast and its confidence interval.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.plot(df.index, df[observed_column], label='Observed')  # Observed data
+    plt.plot(forecast_mean.index, forecast_mean, label='Forecast', color='red')  # Forecasted data
+    plt.fill_between(forecast_mean.index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink', alpha=0.3)  # Confidence interval
+    plt.legend()
+    plt.title(f'{observed_column} with Forecast and Confidence Interval')
     plt.show()

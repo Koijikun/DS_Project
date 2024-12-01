@@ -1,13 +1,14 @@
 import pandas as pd
+import os
 
 def aggregate_data(input_path, output_path, frequency='ME'):
-    # Read the data into a pandas DataFrame
+    # Read the data
     df = pd.read_csv(input_path, delimiter=";")
 
-    # Convert 'Datum' column to datetime with the correct format
+    # Convert 'Datum' column to datetime
     df['Datum'] = pd.to_datetime(df['Datum'], format='%d.%m.%Y')
 
-    # Set 'Datum' as the index of the DataFrame (before resampling)
+    # Set 'Datum' as the index
     df.set_index('Datum', inplace=True)
 
     # Convert all columns except 'Datum' to numeric
@@ -33,15 +34,18 @@ def aggregate_data(input_path, output_path, frequency='ME'):
     # Save the aggregated data to the new CSV file with the ';' delimiter
     df_resampled.to_csv(output_path, sep=";", index=True)
 
-# Example usage for monthly aggregation
-input_path = r'C:\Users\emreo\Desktop\ZHAW\DS\water_consumption_2015_2023.csv'
-output_path_monthly = r'C:\Users\emreo\Desktop\ZHAW\DS\water_consumption_2015_2023_monthly.csv'
-aggregate_data(input_path, output_path_monthly, frequency='ME')  # For monthly aggregation
+# Define the base path
+base_path = os.getcwd()
 
-# Example usage for weekly aggregation
-output_path_weekly = r'C:\Users\emreo\Desktop\ZHAW\DS\water_consumption_2015_2023_weekly.csv'
-aggregate_data(input_path, output_path_weekly, frequency='W')  # For weekly aggregation
+input_path = os.path.join(base_path, "water_data", "input" , "water_consumption_2015_2023.csv")
+output_dir = os.path.join(base_path, "water_data", "output")
 
-# Example usage for weekly aggregation
-output_path_weekly = r'C:\Users\emreo\Desktop\ZHAW\DS\water_consumption_2015_2023_daily.csv'
-aggregate_data(input_path, output_path_weekly, frequency='D')  # For daily aggregation
+# Output file paths
+output_path_monthly = os.path.join(output_dir, "water_consumption_2015_2023_monthly.csv")
+output_path_weekly = os.path.join(output_dir, "water_consumption_2015_2023_weekly.csv")
+output_path_daily = os.path.join(output_dir, "water_consumption_2015_2023_daily.csv")
+
+# Perform aggregations
+aggregate_data(input_path, output_path_monthly, frequency='ME') # Monthly aggregation
+aggregate_data(input_path, output_path_weekly, frequency='W') # Weekly aggregation
+aggregate_data(input_path, output_path_daily, frequency='D') # Daily aggregation

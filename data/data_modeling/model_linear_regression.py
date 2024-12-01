@@ -1,79 +1,86 @@
 import sys
 import os
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(parent_dir)
-
-from data_exploration.exploration import df_reduced
-
-from data_exploration.exploration import df_reduced
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-# Assuming df_reduced is your cleaned and pre-processed DataFrame
-# Your target variable is 'Wasserverbrauch' (water consumption)
-# You have dummy variables for weekdays ('is_monday', 'is_tuesday', etc.)
+# Add the parent directory to system path for module imports
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 
-df_reduced.index = pd.DatetimeIndex(df_reduced.index).to_period('D')
+# Import data loading and exploration functions
+from data_exploration.data_loader import load_and_clean_data
+from data_exploration.data_exploration import perform_data_exploration
+
+# Define the base path
+base_path = os.getcwd()
+
+# Specify the file path (can be modified to load different files)
+input_file_path = os.path.join(base_path, "water_data", "input", "water_consumption_2015_2023.csv")
+
+# Load and clean the data using the data loader
+df_cleaned = load_and_clean_data(input_file_path)
+
+# Perform data exploration (optional)
+perform_data_exploration(df_cleaned)
+
+# Set the index to a period (daily)
+df_cleaned.index = pd.DatetimeIndex(df_cleaned.index).to_period('D')
 
 # Combine Saturday and Sunday into one 'is_weekend' variable
-df_reduced['is_weekend'] = df_reduced['is_saturday'] | df_reduced['is_sunday']  # Using bitwise OR to combine
-df_reduced = df_reduced.drop(columns=['is_saturday', 'is_sunday'])  # Drop individual weekend columns
+df_cleaned['is_weekend'] = df_cleaned['is_saturday'] | df_cleaned['is_sunday']  # Use bitwise OR
+df_cleaned = df_cleaned.drop(columns=['is_saturday', 'is_sunday'])  # Drop individual weekend columns
 
-# Step 1: Specify the endogenous and exogenous variables
-endog = df_reduced['Wasserverbrauch']  # Endogenous variable (water consumption)
-exog = df_reduced.drop(columns=['Wasserverbrauch','rolling_mean','lag_2','RainDur_min','Geburte','StrGlo_W/m2'])  # Exogenous variables
+# Define target and features
+endog = df_cleaned['Wasserverbrauch']  # Target variable (water consumption)
+exog = df_cleaned.drop(columns=['Wasserverbrauch', 'rolling_mean', 'lag_2', 'RainDur_min', 'Geburte', 'StrGlo_W/m2'])  # Features (other variables)
 
 # Add new features: squared terms and interaction terms
-exog['Temp^2'] = df_reduced['T_C'] ** 2
-exog['StrGlo^2'] = df_reduced['StrGlo_W/m2'] ** 2
-exog['RainDur_min^2'] = df_reduced['RainDur_min'] ** 2
-exog['RainDur_min*weekend'] = df_reduced['RainDur_min'] * df_reduced['is_weekend']  # Interaction term
+exog['Temp^2'] = df_cleaned['T_C'] ** 2
+exog['StrGlo^2'] = df_cleaned['StrGlo_W/m2'] ** 2
+exog['RainDur_min^2'] = df_cleaned['RainDur_min'] ** 2
+exog['RainDur_min*weekend'] = df_cleaned['RainDur_min'] * df_cleaned['is_weekend']  # Interaction term
 
-# Remove rows with NaN or Inf in exogenous variables
+# Clean the exogenous variables by replacing infinities and dropping NaN rows
 exog_clean = exog.replace([np.inf, -np.inf], np.nan)  # Replace infinities with NaN
 exog_clean = exog_clean.dropna()  # Drop rows with NaN values
 
-# Ensure that the endogenous variable (target) also has no missing values
+# Ensure the target variable has no missing values for the cleaned exogenous variables
 endog_clean = endog[exog_clean.index]
 
-# Step 2: Add a constant to the exogenous variables for the intercept in the linear regression
+# Add constant to exogenous variables for the intercept
 exog_clean = sm.add_constant(exog_clean)
 
-# Step 3: Split into train and test set
-# Use the last 360 rows for the test set
+# Split into train and test sets
 train_size = len(exog_clean) - 360
 train_exog = exog_clean.iloc[:train_size]
 test_exog = exog_clean.iloc[train_size:]
 train_endog = endog_clean.iloc[:train_size]
 test_endog = endog_clean.iloc[train_size:]
 
-# Step 4: Fit the Linear Regression model (OLS - Ordinary Least Squares) on the train set
-model = sm.OLS(train_endog, train_exog)  # Fit the model using OLS
+# Fit the OLS (Ordinary Least Squares) model on the train set
+model = sm.OLS(train_endog, train_exog)
 results = model.fit()
 
-# Step 5: Predict on the test set
+# Predict on the test set
 test_predictions = results.predict(test_exog)
 
-# Step 6: Display the results summary
+# Print model results
 print(results.summary())
 
-# Step 7: Forecasting (plotting test set predictions)
-# Convert PeriodIndex to DateTimeIndex for proper plotting
-df_reduced.index = df_reduced.index.to_timestamp()
+# Plot actual vs predicted values for the test set
+df_cleaned.index = df_cleaned.index.to_timestamp()  # Convert PeriodIndex to DateTimeIndex
 
-# Now, align the observed and predicted values for the test set
 observed_test_values = test_endog
 predicted_test_values = test_predictions
 
-# Convert PeriodIndex to DateTimeIndex for proper plotting
+# Convert PeriodIndex to DateTimeIndex for plotting
 observed_test_values.index = observed_test_values.index.to_timestamp()
 predicted_test_values.index = predicted_test_values.index.to_timestamp()
 
-# Now you can plot the data (actual vs predicted)
+# Plot observed vs predicted values
 plt.figure(figsize=(10, 6))
 plt.plot(observed_test_values.index, observed_test_values, label='Observed', color='blue')
 plt.plot(predicted_test_values.index, predicted_test_values, label='Predicted', color='red', linestyle='--')
@@ -88,4 +95,3 @@ plt.legend()
 
 # Show the plot
 plt.show()
-

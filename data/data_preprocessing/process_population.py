@@ -1,34 +1,36 @@
 import pandas as pd
+import os
 
-# File path
-path = r'C:\Users\emreo\Desktop\ZHAW\DS\bevölkerung_monatlich.csv'
+# Define the base path
+base_path = os.getcwd()
 
-# Read the data into a pandas DataFrame
-df = pd.read_csv(path, delimiter=";")
+# Define the input and output paths
+input_path = os.path.join(base_path, 'water_data', 'input', 'bevölkerung_monatlich.csv')
+output_path = os.path.join(base_path, 'water_data', 'output', 'population_monthly.csv')
 
-# Convert the 'Datum' column to datetime format
+# Read the data
+df = pd.read_csv(input_path, delimiter=";")
+
+# Convert the 'Datum' column to datetime
 df['Datum'] = pd.to_datetime(df['Datum'], format='%d.%m.%Y')
 
-# Extract the month-year from the 'Datum' column
+# Extract the month from the 'Datum' column
 df['Monat'] = df['Datum'].dt.to_period('M')
 
 # Group by 'Monat' and 'Herkunft', and aggregate 'Bevölkerung' by summing
 aggregated_data = df.groupby(['Monat', 'Herkunft'])['Bevölkerung'].sum().reset_index()
 
-# Convert the 'Monat' (period) to the last day of each month
+# Convert the 'Monat' to the last day of each month
 aggregated_data['Datum'] = aggregated_data['Monat'].dt.to_timestamp('M')
 
-# Drop the 'Monat' column as it's no longer needed
+# Drop the 'Monat' column
 aggregated_data.drop(columns=['Monat'], inplace=True)
 
-# Reorder columns to match the desired order: 'Datum', 'Herkunft', 'Bevölkerung'
+# Reorder columns
 aggregated_data = aggregated_data[['Datum', 'Herkunft', 'Bevölkerung']]
 
-# Sort the data by 'Datum' to ensure correct order
+# Sort the data by 'Datum'
 aggregated_data.sort_values(by='Datum', ascending=True, inplace=True)
 
-# Define the new path for the output CSV file
-output_path = r'C:\Users\emreo\Desktop\ZHAW\DS\aggregated_bevölkerung.csv'
-
-# Save the aggregated data to the new CSV file with ';' delimiter
+# Save the aggregated data
 aggregated_data.to_csv(output_path, index=False, sep=";")

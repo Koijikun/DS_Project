@@ -1,71 +1,68 @@
 import sys
 import os
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(parent_dir)
-
-from data_exploration.exploration import df_reduced
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
-# Assuming df is your cleaned and pre-processed DataFrame
-# Your target variable is 'Wasserverbrauch' (water consumption)
-# You have dummy variables for weekdays ('is_monday', 'is_tuesday', etc.)
+# Add parent directory to system path for imports
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 
-df_reduced.index = pd.DatetimeIndex(df_reduced.index).to_period('D')
+# Import the data loading function, exploration functions, and plot functions
+from data_exploration.data_loader import load_and_clean_data
+from data_exploration.data_exploration import perform_data_exploration
+from data_exploration.plot_functions import plot_forecast
 
-# Step 1: Specify the endogenous and exogenous variables
-endog = df_reduced['Wasserverbrauch']  # Endogenous variable (water consumption)
-exog = df_reduced.drop(columns=['Wasserverbrauch'])  # Exogenous variables (weekday dummies)
+# Define the base path
+base_path = os.getcwd()
 
-# Remove rows with NaN or Inf in exogenous variables
+# Specify the file path (can be modified to load different files)
+input_file_path = os.path.join(base_path, "water_data", "input" , "water_consumption_2015_2023.csv")
+
+
+# Load and clean the data
+df_cleaned = load_and_clean_data(input_file_path)
+
+# Perform data exploration
+perform_data_exploration(df_cleaned)
+
+# Set the index to a period (daily) for time series analysis
+df_cleaned.index = pd.DatetimeIndex(df_cleaned.index).to_period('D')
+
+# Define target and features
+endog = df_cleaned['Wasserverbrauch']  # Target variable (water consumption)
+exog = df_cleaned.drop(columns=['Wasserverbrauch'])  # Features (weekday dummies)
+
+# Clean the exogenous variables by replacing infinities and dropping NaN rows
 exog_clean = exog.replace([np.inf, -np.inf], np.nan)  # Replace infinities with NaN
 exog_clean = exog_clean.dropna()  # Drop rows with NaN values
 
-# Ensure that the endogenous variable (target) also has no missing values
+# Ensure target variable has no missing values
 endog_clean = endog[exog_clean.index]
 
-
-# Step 2: Fit the SARIMA model
-# Seasonal order (P, D, Q, m) where m = 365 for yearly seasonality
-# p, d, q are the non-seasonal AR, I, MA orders respectively
-# Use only a subset of data for faster testing
-endog_clean_subset = endog_clean[:365]  # First year of data
-exog_clean_subset = exog_clean[:365]
-model = sm.tsa.SARIMAX(endog_clean_subset, exog=exog_clean_subset,
+# Fit the SARIMA model
+model = sm.tsa.SARIMAX(endog_clean, exog=exog_clean,
                        order=(1, 1, 1),  # Non-seasonal AR, I, MA orders
-                       seasonal_order=(1, 1, 1, 30),  # Seasonal AR, I, MA orders with yearly seasonality
+                       seasonal_order=(1, 1, 1, 12),  # Seasonal AR, I, MA orders with yearly seasonality
                        enforce_stationarity=False,
                        enforce_invertibility=False)
 results = model.fit(disp=False)
 
-# Step 3: Fit the model
-results = model.fit()
-
-# Step 4: Display the results summary
+# Display the results summary
 print(results.summary())
 
-# Step 5: Plot diagnostics to check the residuals
+# Plot diagnostics to check the residuals
 results.plot_diagnostics(figsize=(15, 10))
 plt.show()
 
-# Step 6: Forecasting (optional)
-# Let's predict for the next 12 months (for example) or use any time range
-forecast = results.get_forecast(steps=365, exog=exog[-365:])  # Adjust the forecast horizon
+# Forecast for the next 365 days
+forecast = results.get_forecast(steps=365, exog=exog[-365:])
 forecast_mean = forecast.predicted_mean
 forecast_ci = forecast.conf_int()
 
-# Convert the period index to a datetime index for plotting
-df_reduced.index = df_reduced.index.to_timestamp()
+# Convert PeriodIndex to DateTimeIndex for proper plotting
+df_cleaned.index = df_cleaned.index.to_timestamp()
 
-# Plot the observed data and the forecast
-plt.figure(figsize=(10, 6))
-plt.plot(df_reduced.index, df_reduced['Wasserverbrauch'], label='Observed')  # Now using DatetimeIndex
-plt.plot(forecast_mean.index, forecast_mean, label='Forecast', color='red')
-plt.fill_between(forecast_mean.index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink', alpha=0.3)
-plt.legend()
-plt.show()
-
-
+# Plot the observed data and the forecast using the plot_forecast function
+plot_forecast(df_cleaned, forecast_mean, forecast_ci, observed_column='Wasserverbrauch')

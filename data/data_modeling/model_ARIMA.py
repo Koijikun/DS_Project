@@ -1,65 +1,70 @@
 import sys
 import os
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(parent_dir)
-
-from data_exploration.exploration import df_reduced
-
-from data_exploration.exploration import df_reduced
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
-# Assuming df is your cleaned and pre-processed DataFrame
-# Your target variable is 'Wasserverbrauch' (water consumption)
-# You have dummy variables for weekdays ('is_monday', 'is_tuesday', etc.)
+# Add the parent directory to system path for module imports
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 
-df_reduced.index = pd.DatetimeIndex(df_reduced.index).to_period('D')
+# Import data loading and exploration functions
+from data_exploration.data_loader import load_and_clean_data
+from data_exploration.data_exploration import perform_data_exploration
 
-# Step 1: Specify the endogenous and exogenous variables
-endog = df_reduced['Wasserverbrauch']  # Endogenous variable (water consumption)
-exog = df_reduced.drop(columns=['Wasserverbrauch'])  # Exogenous variables (weekday dummies)
+# Define the base path
+base_path = os.getcwd()
 
-# Remove rows with NaN or Inf in exogenous variables
+# Specify the file path (can be modified to load different files)
+input_file_path = os.path.join(base_path, "water_data", "input", "water_consumption_2015_2023.csv")
+
+# Load and clean the data using the data loader
+df_cleaned = load_and_clean_data(input_file_path)
+
+# Perform data exploration (optional)
+perform_data_exploration(df_cleaned)
+
+# Set the index to a period (daily)
+df_cleaned.index = pd.DatetimeIndex(df_cleaned.index).to_period('D')
+
+# Define the target and features
+endog = df_cleaned['Wasserverbrauch']  # Target variable (water consumption)
+exog = df_cleaned.drop(columns=['Wasserverbrauch'])  # Features (other variables)
+
+# Clean the exogenous variables by replacing infinities and dropping NaN rows
 exog_clean = exog.replace([np.inf, -np.inf], np.nan)  # Replace infinities with NaN
 exog_clean = exog_clean.dropna()  # Drop rows with NaN values
 
-# Ensure that the endogenous variable (target) also has no missing values
+# Ensure the target variable has no missing values for the cleaned exogenous variables
 endog_clean = endog[exog_clean.index]
 
-
-# Step 2: Fit the ARIMA model
-# Seasonal order (P, D, Q, m) where m = 365 for yearly seasonality
-# p, d, q are the non-seasonal AR, I, MA orders respectively
+# Fit the ARIMA model (Auto-Regressive Integrated Moving Average)
+# The model order is (1, 1, 1) for AR, I, MA respectively
 model = sm.tsa.ARIMA(endog_clean, order=(1, 1, 1))
 
-# Step 3: Fit the model
+# Fit the model to the data
 results = model.fit()
 
-# Step 4: Display the results summary
+# Print the model summary
 print(results.summary())
 
-# Step 5: Plot diagnostics to check the residuals
+# Plot the diagnostics to check residuals and model fit
 results.plot_diagnostics(figsize=(15, 10))
 plt.show()
 
-# Step 6: Forecasting (optional)
-# Let's predict for the next 12 months (for example) or use any time range
-forecast = results.get_forecast(steps=365, exog=exog[-365:])  # Adjust the forecast horizon
+# Forecast the next 365 days (one year) with the given exogenous variables
+forecast = results.get_forecast(steps=365, exog=exog_clean[-365:])  # Adjust forecast horizon
 forecast_mean = forecast.predicted_mean
 forecast_ci = forecast.conf_int()
 
-# Convert the period index to a datetime index for plotting
-df_reduced.index = df_reduced.index.to_timestamp()
+# Convert the index back to a DatetimeIndex for plotting
+df_cleaned.index = df_cleaned.index.to_timestamp()
 
-# Plot the observed data and the forecast
+# Plot the actual vs forecasted data
 plt.figure(figsize=(10, 6))
-plt.plot(df_reduced.index, df_reduced['Wasserverbrauch'], label='Observed')  # Now using DatetimeIndex
-plt.plot(forecast_mean.index, forecast_mean, label='Forecast', color='red')
-plt.fill_between(forecast_mean.index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink', alpha=0.3)
+plt.plot(df_cleaned.index, df_cleaned['Wasserverbrauch'], label='Observed')  # Observed values
+plt.plot(forecast_mean.index, forecast_mean, label='Forecast', color='red')  # Forecasted values
+plt.fill_between(forecast_mean.index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink', alpha=0.3)  # Confidence interval
 plt.legend()
 plt.show()
-
-
