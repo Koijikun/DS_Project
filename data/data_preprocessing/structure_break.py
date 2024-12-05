@@ -40,6 +40,10 @@ df_cleaned.loc[mask_break_period, 'Wasserverbrauch'] = (
 # Insert the adjusted values back into the DataFrame
 df_cleaned.update(df_cleaned.loc[mask_break_period])
 
+# Save the new DataFrame to output folder
+output_path = os.path.join(base_path, 'water_data', 'output', 'water_consumption_2015_2023_normalized.csv')
+df_cleaned.to_csv(output_path, index=True, sep=";")
+
 # Optional: Verify adjustments
 print("Adjusted Data for Structural Break Period:")
 print(df_cleaned.loc[mask_break_period])

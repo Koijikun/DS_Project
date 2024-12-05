@@ -18,7 +18,7 @@ from data_exploration.data_loader import load_and_clean_data
 base_path = os.getcwd()
 
 # Specify the file path
-input_file_path = os.path.join(base_path, "water_data", "input", "water_consumption_2015_2023.csv")
+input_file_path = os.path.join(base_path, "water_data", "output", "water_consumption_2015_2023_normalized.csv")
 
 # Load and clean the data
 df_cleaned = load_and_clean_data(input_file_path, with_lag_features=True, lag_days=7)
