@@ -10,7 +10,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(script_dir, "..")))
 
 # Import data loading and exploration functions
-from data.data_exploration.data_loader import load_and_clean_data
+from data.data_exploration.data_loader import load_streamlit_data
 from data.data_exploration.plot_functions import plot_aggregated_data
 
 st.set_page_config(
@@ -20,7 +20,7 @@ st.set_page_config(
 
 @st.cache_resource
 def get_pyg_renderer() -> "StreamlitRenderer":
-    df_manual = load_and_clean_data("water_data/input/water_consumption_2015_2023.csv")
+    df_manual = load_streamlit_data("water_data/input/water_consumption_2015_2023.csv")
     return StreamlitRenderer(df_manual, spec="./gw_config.json", spec_io_mode="rw")
 
 renderer = get_pyg_renderer()
