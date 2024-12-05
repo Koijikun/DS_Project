@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV, TimeSeriesSp
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 import numpy as np
+import joblib
 
 # Add the parent directory to system path for module imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -100,3 +101,11 @@ plt.barh(range(len(indices)), importances[indices], align="center")
 plt.yticks(range(len(indices)), features[indices])
 plt.xlabel("Relative Importance")
 plt.show()
+
+# Define the path for saving the model
+model_save_path = os.path.join(base_path, 'models', 'best_random_forest_model.pkl')
+
+# Save the trained model using joblib
+joblib.dump(best_rf_model, model_save_path)
+
+print(f"Model saved to {model_save_path}")
