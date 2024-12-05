@@ -18,21 +18,23 @@ from data_exploration.plot_functions import plot_forecast
 base_path = os.getcwd()
 
 # Specify the file path (can be modified to load different files)
-input_file_path = os.path.join(base_path, "water_data", "input" , "water_consumption_2015_2023.csv")
+input_file_path = os.path.join(base_path, "water_data", "output" , "water_consumption_2015_2023_monthly_join_population_monthly.csv")
 
 
 # Load and clean the data
 df_cleaned = load_and_clean_data(input_file_path)
 
 # Perform data exploration
-perform_data_exploration(df_cleaned)
+# perform_data_exploration(df_cleaned)
 
 # Set the index to a period (daily) for time series analysis
-df_cleaned.index = pd.DatetimeIndex(df_cleaned.index).to_period('D')
+df_cleaned.index = pd.DatetimeIndex(df_cleaned.index).to_period('M')
 
 # Define target and features
 endog = df_cleaned['Wasserverbrauch']  # Target variable (water consumption)
-exog = df_cleaned.drop(columns=['Wasserverbrauch'])  # Features (weekday dummies)
+
+relevant_columns = ['StrGlo_W/m2', 'T_C']  # Add any other variables you'd like to test
+exog = df_cleaned[relevant_columns]
 
 # Clean the exogenous variables by replacing infinities and dropping NaN rows
 exog_clean = exog.replace([np.inf, -np.inf], np.nan)  # Replace infinities with NaN
@@ -56,13 +58,27 @@ print(results.summary())
 results.plot_diagnostics(figsize=(15, 10))
 plt.show()
 
-# Forecast for the next 365 days
-forecast = results.get_forecast(steps=365, exog=exog[-365:])
+# Forecast for the next 12 months
+future_months = 12
+
+# Create exogenous variables for the forecast period
+# Assuming future `exog` values are calculated or extended
+last_date = exog_clean.index[-1].to_timestamp()
+future_dates = pd.date_range(start=last_date + pd.DateOffset(months=1), periods=future_months, freq='M')
+
+# Example: Using the mean of each exogenous variable for simplicity
+future_exog = pd.DataFrame(
+    {col: [exog_clean[col].mean()] * future_months for col in exog_clean.columns},
+    index=future_dates
+)
+
+# Forecasting
+forecast = results.get_forecast(steps=future_months, exog=future_exog)
 forecast_mean = forecast.predicted_mean
 forecast_ci = forecast.conf_int()
 
-# Convert PeriodIndex to DateTimeIndex for proper plotting
+# Convert PeriodIndex back to DateTimeIndex for proper plotting
 df_cleaned.index = df_cleaned.index.to_timestamp()
 
-# Plot the observed data and the forecast using the plot_forecast function
+# Plot the observed data and the forecast
 plot_forecast(df_cleaned, forecast_mean, forecast_ci, observed_column='Wasserverbrauch')

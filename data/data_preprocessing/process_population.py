@@ -17,20 +17,36 @@ df['Datum'] = pd.to_datetime(df['Datum'], format='%d.%m.%Y')
 # Extract the month from the 'Datum' column
 df['Monat'] = df['Datum'].dt.to_period('M')
 
-# Group by 'Monat' and 'Herkunft', and aggregate 'Bevölkerung' by summing
-aggregated_data = df.groupby(['Monat', 'Herkunft'])['Bevölkerung'].sum().reset_index()
+# Pivot the data to separate Swiss and foreign populations
+pivoted_data = (
+    df.pivot_table(
+        index='Monat', 
+        columns='Herkunft', 
+        values='Bevölkerung', 
+        aggfunc='sum'
+    )
+    .reset_index()
+)
+
+# Rename columns for clarity
+pivoted_data.columns = ['Monat', 'Bevölkerung_Swiss', 'Bevölkerung_Foreign']
+
+# Calculate the total population
+pivoted_data['Bevölkerung_total'] = pivoted_data['Bevölkerung_Swiss'] + pivoted_data['Bevölkerung_Foreign']
 
 # Convert the 'Monat' to the last day of each month
-aggregated_data['Datum'] = aggregated_data['Monat'].dt.to_timestamp('M')
+pivoted_data['Datum'] = pivoted_data['Monat'].dt.to_timestamp('M')
 
 # Drop the 'Monat' column
-aggregated_data.drop(columns=['Monat'], inplace=True)
+pivoted_data.drop(columns=['Monat'], inplace=True)
 
 # Reorder columns
-aggregated_data = aggregated_data[['Datum', 'Herkunft', 'Bevölkerung']]
+pivoted_data = pivoted_data[['Datum', 'Bevölkerung_Swiss', 'Bevölkerung_Foreign', 'Bevölkerung_total']]
 
 # Sort the data by 'Datum'
-aggregated_data.sort_values(by='Datum', ascending=True, inplace=True)
+pivoted_data.sort_values(by='Datum', ascending=True, inplace=True)
 
 # Save the aggregated data
-aggregated_data.to_csv(output_path, index=False, sep=";")
+pivoted_data.to_csv(output_path, index=False, sep=";")
+
+print("Aggregated data saved to:", output_path)
